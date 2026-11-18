@@ -97,7 +97,7 @@ jobs:
   package:
     name: Package
     if: github.event_name != 'pull_request'
-    needs: [version, frontend, rust]
+    needs: [version, frontend]
     permissions:
       contents: read
     uses: ./.github/workflows/build.yml

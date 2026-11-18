@@ -21,7 +21,10 @@ parking_lot = "0.12"
 
 [profile.release]
 codegen-units = 1
-lto = "thin"
+# No LTO: it internalises symbols from Rust's std (such as
+# __isPlatformVersionAtLeast) that the prebuilt ONNX Runtime library needs on
+# macOS, which breaks the link. Inference time is dominated by ONNX Runtime.
+lto = false
 opt-level = 3
 strip = "symbols"
 
