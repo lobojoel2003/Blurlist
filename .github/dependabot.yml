@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      cargo-minor:
+        update-types: [minor, patch]
+    ignore:
+      # ONNX Runtime bindings are pinned on purpose; upgrade deliberately.
+      - dependency-name: ort
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

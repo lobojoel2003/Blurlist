@@ -1,0 +1,128 @@
+name: Release
+
+# Push a tag like v0.2.0 (matching the version in package.json / Cargo.toml)
+# to build installers for every platform and publish a GitHub Release.
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)build, e.g. v0.1.0
+        required: true
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Resolve tag
+        id: meta
+        shell: bash
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.meta.outputs.tag }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Tag matches the version in every manifest
+        run: node scripts/version.mjs check "${{ steps.meta.outputs.tag }}"
+
+      - name: Write release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="${{ steps.meta.outputs.version }}"
+          {
+            node scripts/version.mjs notes "$v"
+            cat <<EOF
+
+          ## Downloads
+
+          | Platform | File |
+          | --- | --- |
+          | Windows 10/11 (x64) | \`Blurlist_${v}_x64-setup.exe\` or \`Blurlist_${v}_x64_en-US.msi\` |
+          | macOS 11+ (Apple Silicon) | \`Blurlist_${v}_aarch64.dmg\` |
+          | macOS 11+ (Intel) | \`Blurlist_${v}_x64.dmg\` |
+          | Linux (x64) | \`Blurlist_${v}_amd64.AppImage\`, \`.deb\` or \`.rpm\` |
+          | Command line | \`blurlist-cli_${v}_<platform>.tar.gz\` / \`.zip\` |
+
+          The bundled face models (YuNet, MIT; SFace, Apache-2.0) are included in every download.
+          Verify downloads against \`SHA256SUMS.txt\`. Builds without code-signing certificates show an
+          "unidentified developer" (macOS) or SmartScreen (Windows) prompt on first launch — see the README.
+
+          Build ${{ github.run_number }} · commit ${GITHUB_SHA::7}
+          EOF
+          } > notes.md
+          cat notes.md
+
+      - name: Create draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          pre=""
+          case "$tag" in *-*) pre="--prerelease" ;; esac
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes-file notes.md --draft=true
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --draft $pre \
+              --title "Blurlist ${{ steps.meta.outputs.version }}" --notes-file notes.md --verify-tag
+          fi
+
+  build:
+    name: Build
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      release-tag: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit
+
+  publish:
+    name: Publish release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checksums
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ needs.prepare.outputs.tag }}"
+          mkdir assets && cd assets
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --skip-existing
+          rm -f SHA256SUMS.txt
+          sha256sum * | tee SHA256SUMS.txt
+          gh release upload "$tag" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ needs.prepare.outputs.tag }}"
+          case "$tag" in
+            *-*) gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease ;;
+            *) gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest ;;
+          esac

@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  BLURLIST_BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  version:
+    name: Version consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node scripts/version.mjs check
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Formatting
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit and component tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+
+  rust:
+    name: Engine (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: models/*.onnx
+          key: models-${{ hashFiles('models/manifest.json') }}
+      - name: Fetch and verify models
+        run: node scripts/fetch-models.mjs
+      - name: Install Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf
+      - name: rustfmt
+        if: runner.os == 'Linux'
+        run: cargo fmt --all --check
+      - name: Build the web UI (needed by the desktop crate)
+        if: runner.os == 'Linux'
+        run: npm ci && npm run build
+      - name: Clippy
+        if: runner.os == 'Linux'
+        run: cargo clippy --workspace --all-targets --features blurlist-core/cli -- -D warnings
+      - name: Tests with the real models
+        run: cargo test -p blurlist-core --features cli
+        env:
+          BLURLIST_REQUIRE_MODELS: '1'
+
+  package:
+    name: Package
+    if: github.event_name != 'pull_request'
+    needs: [version, frontend, rust]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+    secrets: inherit

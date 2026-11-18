@@ -1,0 +1,35 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Blurlist. **Please never attach photos of children or anyone on your roster.**
+        Describe the problem in words, or use a photo of yourself or a public-domain image.
+  - type: input
+    id: version
+    attributes:
+      label: Version and build
+      description: Settings → About shows e.g. "0.1.0 (build 42, 1a2b3c4)".
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS (Apple Silicon), macOS (Intel), Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error messages
+      render: text

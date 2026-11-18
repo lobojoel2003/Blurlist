@@ -1,0 +1,164 @@
+name: Build installers
+
+# Reusable: CI calls it to produce installers as workflow artifacts; the
+# release workflow calls it with a tag to attach them to a GitHub Release.
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: Tag of the draft release to upload to (empty for CI builds)
+        type: string
+        default: ''
+
+env:
+  CARGO_TERM_COLOR: always
+  BLURLIST_BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  bundle:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: appimage,deb,rpm
+          - name: macOS Apple Silicon
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+          - name: macOS Intel
+            os: macos-latest
+            target: x86_64-apple-darwin
+            bundles: app,dmg
+          - name: Windows x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: msi,nsis
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release-tag || github.sha }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf xdg-utils
+
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: models/*.onnx
+          key: models-${{ hashFiles('models/manifest.json') }}
+
+      - name: Fetch and verify models
+        run: node scripts/fetch-models.mjs
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Version
+        id: version
+        shell: bash
+        run: echo "version=$(node scripts/version.mjs get)" >> "$GITHUB_OUTPUT"
+
+      # Signing is optional: when these secrets exist the installers are signed
+      # (and notarised on macOS); otherwise they are built unsigned.
+      - name: Configure macOS signing
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!v}" ]; then
+              { echo "$v<<__EOF__"; echo "${!v}"; echo "__EOF__"; } >> "$GITHUB_ENV"
+            fi
+          done
+
+      - name: Build the desktop app
+        shell: bash
+        run: npx tauri build --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Build the command-line tool
+        shell: bash
+        run: cargo build --release --locked -p blurlist-core --features cli --bin blurlist --target ${{ matrix.target }}
+
+      - name: Collect release files
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          out="release-files"
+          mkdir -p "$out"
+          bundle="target/$TARGET/release/bundle"
+          find "$bundle" -maxdepth 2 -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.dmg' -o -name '*.msi' -o -name '*-setup.exe' \) -exec cp {} "$out/" \;
+
+          cli="blurlist-cli_${VERSION}_${TARGET}"
+          mkdir -p "$cli/models/licenses"
+          cp models/*.onnx models/README.md "$cli/models/"
+          cp models/licenses/* "$cli/models/licenses/"
+          cp LICENSE README.md CHANGELOG.md "$cli/"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp "target/$TARGET/release/blurlist.exe" "$cli/"
+            7z a -tzip "$out/$cli.zip" "$cli" > /dev/null
+          else
+            cp "target/$TARGET/release/blurlist" "$cli/"
+            tar -czf "$out/$cli.tar.gz" "$cli"
+          fi
+          ls -la "$out"
+
+      - name: Smoke-test the command-line tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="blurlist-cli_${{ steps.version.outputs.version }}_${{ matrix.target }}"
+          if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ] && [ "$(uname -m)" = "arm64" ]; then
+            echo "Cross-compiled Intel binary on Apple Silicon; checking with Rosetta if present."
+            arch -x86_64 /usr/bin/true 2>/dev/null || { echo "Rosetta not available, skipping"; exit 0; }
+          fi
+          bin="$dir/blurlist"; [ -f "$bin.exe" ] && bin="$bin.exe"
+          "$bin" --version
+          "$bin" --db "$RUNNER_TEMP/smoke.sqlite3" models | tee models.txt
+          grep "yunet-2023mar" models.txt | grep -vq "not found"
+          grep "sface-2021dec" models.txt | grep -vq "not found"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: blurlist-${{ steps.version.outputs.version }}-build${{ github.run_number }}-${{ matrix.target }}
+          path: release-files/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach to the release
+        if: inputs.release-tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release-tag }}" release-files/* --clobber --repo "$GITHUB_REPOSITORY"
