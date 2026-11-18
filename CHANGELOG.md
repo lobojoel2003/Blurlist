@@ -41,8 +41,8 @@ The first public release.
   bundled because their published weights are research-only. Custom ONNX
   models can be imported.
 - **`blurlist` command-line tool** sharing the same database format.
-- Installers for Windows (MSI, NSIS), macOS (Apple Silicon and Intel DMG) and
-  Linux (AppImage, deb, rpm), with SHA-256 checksums.
+- Installers for Windows 10/11 (MSI, NSIS), macOS 13.4+ on Apple Silicon (DMG)
+  and Linux x64 (AppImage, deb, rpm), plus the CLI, with SHA-256 checksums.
 
 [Unreleased]: https://github.com/lobojoel2003/Blurlist/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/lobojoel2003/Blurlist/releases/tag/v0.1.0

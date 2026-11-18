@@ -16,6 +16,7 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   BLURLIST_BUILD_NUMBER: ${{ github.run_number }}
+  MACOSX_DEPLOYMENT_TARGET: '13.4'
 
 jobs:
   version:

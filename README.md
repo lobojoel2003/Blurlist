@@ -118,9 +118,10 @@ no internet connection is needed after installing.
 | System | File | Notes |
 | --- | --- | --- |
 | Windows 10/11 (x64) | `Blurlist_<version>_x64-setup.exe` (or `.msi`) | If SmartScreen says *Windows protected your PC*, choose **More info → Run anyway**. |
-| macOS 11+ Apple Silicon | `Blurlist_<version>_aarch64.dmg` | Drag to Applications. On first launch right-click → **Open**. If macOS says the app is damaged, run `xattr -cr /Applications/Blurlist.app` once. |
-| macOS 11+ Intel | `Blurlist_<version>_x64.dmg` | As above. |
+| macOS 13.4+ (Apple Silicon) | `Blurlist_<version>_aarch64.dmg` | Drag to Applications. On first launch right-click → **Open**. If macOS says the app is damaged, run `xattr -cr /Applications/Blurlist.app` once. |
 | Linux x64 | `.AppImage`, `.deb` or `.rpm` | AppImage: `chmod +x Blurlist_*.AppImage && ./Blurlist_*.AppImage`. Needs glibc 2.39+ and WebKitGTK 4.1: Ubuntu 24.04+, Debian 13+, Fedora 40+ or similar. |
+
+Intel Macs are not supported yet: the ONNX Runtime build that Blurlist links no longer ships for Intel macOS.
 
 The warnings appear because these builds are not signed with a paid developer certificate; the release
 workflow signs automatically once certificates are added as repository secrets. Every release lists SHA-256
@@ -320,8 +321,8 @@ scripts/                fetch-models, version management, README screenshots
   tests; the engine's tests with real models on Linux, macOS and Windows; and, on `main`, installers for every
   platform uploaded as build artifacts.
 - **Releases** ([`release.yml`](.github/workflows/release.yml)): pushing a tag `vX.Y.Z` checks that the tag
-  matches the version, takes the notes from [CHANGELOG.md](CHANGELOG.md), builds Windows, macOS (Apple Silicon
-  and Intel) and Linux installers plus the CLI, attaches `SHA256SUMS.txt` and publishes the GitHub Release.
+  matches the version, takes the notes from [CHANGELOG.md](CHANGELOG.md), builds Windows, macOS (Apple Silicon)
+  and Linux installers plus the CLI, attaches `SHA256SUMS.txt` and publishes the GitHub Release.
 
 To cut a release:
 

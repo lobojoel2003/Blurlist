@@ -14,6 +14,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BLURLIST_BUILD_NUMBER: ${{ github.run_number }}
+  # The prebuilt ONNX Runtime targets macOS 13.4; link everything for the same.
+  MACOSX_DEPLOYMENT_TARGET: '13.4'
 
 jobs:
   bundle:
@@ -29,10 +31,6 @@ jobs:
           - name: macOS Apple Silicon
             os: macos-latest
             target: aarch64-apple-darwin
-            bundles: app,dmg
-          - name: macOS Intel
-            os: macos-latest
-            target: x86_64-apple-darwin
             bundles: app,dmg
           - name: Windows x64
             os: windows-latest
@@ -143,10 +141,6 @@ jobs:
         run: |
           set -euo pipefail
           dir="blurlist-cli_${{ steps.version.outputs.version }}_${{ matrix.target }}"
-          if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ] && [ "$(uname -m)" = "arm64" ]; then
-            echo "Cross-compiled Intel binary on Apple Silicon; checking with Rosetta if present."
-            arch -x86_64 /usr/bin/true 2>/dev/null || { echo "Rosetta not available, skipping"; exit 0; }
-          fi
           bin="$dir/blurlist"; [ -f "$bin.exe" ] && bin="$bin.exe"
           "$bin" --version
           "$bin" --db "$RUNNER_TEMP/smoke.sqlite3" models | tee models.txt
