@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Blurlist hero (README image)</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          'Inter',
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          Ubuntu,
+          sans-serif;
+      }
+      #hero {
+        width: 1600px;
+        box-sizing: border-box;
+        padding: 48px 56px;
+        background:
+          radial-gradient(1200px 500px at 15% 0%, #eeedfe 0%, transparent 60%),
+          linear-gradient(180deg, #f7f7fc, #eef0f8);
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .top img {
+        width: 56px;
+        height: 56px;
+      }
+      .top h1 {
+        margin: 0;
+        font-size: 34px;
+        letter-spacing: -0.02em;
+        color: #151a2d;
+      }
+      .top p {
+        margin: 2px 0 0;
+        color: #565e74;
+        font-size: 17px;
+      }
+      .pills {
+        margin-left: auto;
+        display: flex;
+        gap: 10px;
+      }
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow:
+          0 1px 2px rgba(20, 24, 45, 0.06),
+          0 6px 20px rgba(20, 24, 45, 0.06);
+        font-weight: 650;
+        font-size: 14px;
+        color: #3f37c9;
+      }
+      .pill.green {
+        color: #17955c;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        flex: 1;
+      }
+      .panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .frame {
+        position: relative;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow:
+          0 0 0 1px #e2e5ee,
+          0 18px 50px rgba(20, 24, 45, 0.16);
+        background: #fff;
+      }
+      .frame svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .cap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 650;
+        color: #151a2d;
+        font-size: 17px;
+      }
+      .cap span {
+        font-weight: 500;
+        color: #565e74;
+        font-size: 15px;
+      }
+      .arrow {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #5b54e8;
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-size: 30px;
+        box-shadow: 0 10px 30px rgba(91, 84, 232, 0.35);
+        flex-shrink: 0;
+      }
+      .tag {
+        position: absolute;
+        padding: 5px 10px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hero"></div>
+    <script type="module">
+      import { randomAvatar, sceneBody, sceneFaceBox, svgUrl } from '/src/lib/demo/avatars.ts';
+      const W = 1600,
+        H = 1067,
+        VY = 330,
+        VH = H - 330;
+      const s = 2.0;
+      const people = [0, 1, 2, 3].map((i) => ({
+        params: i === 1 ? randomAvatar(102) : randomAvatar(520 + i * 3),
+        scale: s,
+        x: (W / 5) * (i + 1) - 100 * s,
+        y: H - 240 * s + 30,
+        expression: ['smile', 'grin', 'smile', 'open'][i],
+      }));
+      const scene = { width: W, height: H, people, palette: 0 };
+      const target = sceneFaceBox(people[1]);
+      const cx = target.x + target.w / 2,
+        cy = target.y + target.h / 2;
+      const rx = (target.w * 1.6) / 2,
+        ry = (target.h * 1.75) / 2;
+      const body = sceneBody(scene);
+      const before = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${VY} ${W} ${VH}">${body}
+        <rect x="${target.x - 10}" y="${target.y - 10}" width="${target.w + 20}" height="${target.h + 20}" rx="18" fill="none" stroke="#e0484e" stroke-width="9" stroke-dasharray="26 14"/></svg>`;
+      const after = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${VY} ${W} ${VH}">
+        <defs><filter id="b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="26"/></filter>
+        <clipPath id="c"><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/></clipPath></defs>
+        ${body}<g clip-path="url(#c)"><g filter="url(#b)">${body}</g></g></svg>`;
+      const tagPos = (b) => `left:${((b.x - 10) / W) * 100}%;top:${((b.y + b.h + 16 - VY) / VH) * 100}%`;
+      document.getElementById('hero').innerHTML = `
+        <div class="top">
+          <img src="/public/favicon.svg" alt="" />
+          <div><h1>Blurlist</h1><p>Find and blur opted-out faces across a whole event folder — before anything is uploaded.</p></div>
+          <div class="pills"><span class="pill green">✓ Works offline</span><span class="pill">✓ Metadata removed</span><span class="pill">✓ Never guesses</span></div>
+        </div>
+        <div class="row">
+          <div class="panel"><div class="frame"><img src="${svgUrl(before)}" style="width:100%;display:block"/>
+            <div class="tag" style="background:#e0484e;${tagPos(target)}">On the opt-out roster · 0.71 match</div></div>
+            <div class="cap">Event photo <span>— straight from the camera</span></div></div>
+          <div class="arrow">→</div>
+          <div class="panel"><div class="frame"><img src="${svgUrl(after)}" style="width:100%;display:block"/></div>
+            <div class="cap">Ready to upload <span>— blurred, GPS &amp; camera data stripped</span></div></div>
+        </div>`;
+      document.body.dataset.ready = '1';
+    </script>
+  </body>
+</html>
