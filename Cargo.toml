@@ -10,7 +10,6 @@ rust-version = "1.92"
 license = "GPL-3.0-or-later"
 authors = ["Joel Stain Lobo"]
 repository = "https://github.com/lobojoel2003/Blurlist"
-homepage = "https://github.com/lobojoel2003/Blurlist"
 
 [workspace.dependencies]
 anyhow = "1"
