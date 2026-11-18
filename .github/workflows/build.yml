@@ -60,7 +60,7 @@ jobs:
         if: runner.os == 'Linux'
         run: .github/scripts/install-linux-deps.sh xdg-utils
       - name: Cache models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: models/*.onnx
           key: models-${{ hashFiles('models/manifest.json') }}

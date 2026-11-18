@@ -71,7 +71,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Cache models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: models/*.onnx
           key: models-${{ hashFiles('models/manifest.json') }}
