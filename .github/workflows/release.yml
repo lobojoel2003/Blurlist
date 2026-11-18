@@ -1,7 +1,9 @@
 name: Release
 
-# Push a tag like v0.2.0 (matching the version in package.json / Cargo.toml)
-# to build installers for every platform and publish a GitHub Release.
+# Push a tag like v0.2.0 (matching the version in package.json / Cargo.toml),
+# or run this workflow manually with that tag name, to build installers for
+# every platform and publish a GitHub Release. When run manually for a tag
+# that does not exist yet, the tag is created on the selected commit.
 
 on:
   push:
@@ -9,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to (re)build, e.g. v0.1.0
+        description: Release tag, e.g. v0.1.0 (created on the selected branch if missing)
         required: true
 
 concurrency:
@@ -28,17 +30,29 @@ jobs:
       tag: ${{ steps.meta.outputs.tag }}
       version: ${{ steps.meta.outputs.version }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - name: Resolve tag
         id: meta
         shell: bash
         run: |
+          set -euo pipefail
           tag="${{ github.event.inputs.tag || github.ref_name }}"
+          case "$tag" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::Tag must look like v1.2.3"; exit 1 ;; esac
+          if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            create=false
+          else
+            create=true
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "create=$create" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ steps.meta.outputs.tag }}
+      - name: Check out the tagged commit
+        if: steps.meta.outputs.create == 'false'
+        run: git checkout --quiet "refs/tags/${{ steps.meta.outputs.tag }}"
 
       - uses: actions/setup-node@v5
         with:
@@ -46,6 +60,23 @@ jobs:
 
       - name: Tag matches the version in every manifest
         run: node scripts/version.mjs check "${{ steps.meta.outputs.tag }}"
+
+      - name: Create the tag (manual runs)
+        if: steps.meta.outputs.create == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          sha="$(git rev-parse HEAD)"
+          tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/tags" \
+            -f tag="$tag" -f object="$sha" -f type=commit \
+            -f message="Blurlist ${{ steps.meta.outputs.version }}" \
+            -f "tagger[name]=github-actions[bot]" \
+            -f "tagger[email]=41898282+github-actions[bot]@users.noreply.github.com" --jq .sha)"
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$tag_sha" > /dev/null
+          echo "Created annotated tag $tag at $sha"
 
       - name: Write release notes
         shell: bash
@@ -69,7 +100,7 @@ jobs:
           Verify downloads against \`SHA256SUMS.txt\`. Builds without code-signing certificates show an
           "unidentified developer" (macOS) or SmartScreen (Windows) prompt on first launch — see the README.
 
-          Build ${{ github.run_number }} · commit ${GITHUB_SHA::7}
+          Build ${{ github.run_number }} · commit $(git rev-parse --short=7 HEAD)
           EOF
           } > notes.md
           cat notes.md

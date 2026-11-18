@@ -48,3 +48,5 @@ git push origin main vX.Y.Z
 ```
 
 The release workflow verifies the tag against the version, builds every platform and publishes the release.
+You can also run the **Release** workflow manually from the Actions tab with the tag name; it creates the tag on
+the selected commit if it does not exist yet.

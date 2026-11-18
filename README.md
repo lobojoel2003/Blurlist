@@ -334,6 +334,9 @@ git tag -a v0.2.0 -m "Blurlist 0.2.0"
 git push origin main v0.2.0
 ```
 
+Alternatively push the version bump and run the **Release** workflow from the Actions tab with the tag name
+(`v0.2.0`); it creates the tag on the selected commit and publishes the release.
+
 ## Contributing
 
 Bug reports and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Please **never attach real
