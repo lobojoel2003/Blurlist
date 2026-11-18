@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = ["crates/blurlist-core", "src-tauri"]
+default-members = ["crates/blurlist-core", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"
+license = "GPL-3.0-or-later"
+authors = ["Joel Stain Lobo"]
+repository = "https://github.com/lobojoel2003/Blurlist"
+homepage = "https://github.com/lobojoel2003/Blurlist"
+
+[workspace.dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+parking_lot = "0.12"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+opt-level = 3
+strip = "symbols"
+
+# Image decoding and tensor maths are painfully slow without optimisation,
+# so dependencies are optimised even in debug builds.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.test]
+opt-level = 1

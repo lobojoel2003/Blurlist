@@ -1,0 +1,50 @@
+[package]
+name = "blurlist-core"
+description = "Offline face matching and blurring engine behind the Blurlist desktop app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords = ["face", "privacy", "blur", "onnx", "consent"]
+categories = ["multimedia::images", "computer-vision"]
+
+[lib]
+name = "blurlist_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "blurlist"
+path = "src/bin/blurlist.rs"
+required-features = ["cli"]
+
+[features]
+default = ["download-ort"]
+# Link a prebuilt ONNX Runtime statically (downloaded by `ort-sys` at build time).
+download-ort = ["ort/download-binaries", "ort/tls-native"]
+# Load ONNX Runtime from a shared library at runtime (set ORT_DYLIB_PATH).
+load-dynamic = ["ort/load-dynamic"]
+# The `blurlist` command-line tool.
+cli = ["dep:clap", "dep:tracing-subscriber"]
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp", "tiff", "bmp", "rayon"] }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "api-22"] }
+rusqlite = { version = "0.43", features = ["bundled"] }
+rayon = "1.11"
+walkdir = "2.5"
+time = { version = "0.3.41", features = ["formatting", "macros"] }
+clap = { version = "4.5", features = ["derive", "env"], optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
+[dev-dependencies]
+tempfile = "3.20"

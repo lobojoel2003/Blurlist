@@ -1,0 +1,33 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Node / frontend
+node_modules/
+/dist/
+*.tsbuildinfo
+coverage/
+
+# Models are downloaded by scripts/fetch-models.mjs
+/models/**/*.onnx
+/models/**/*.part
+/models/research/
+
+# Tauri
+/src-tauri/gen/schemas/
+/src-tauri/target/
+
+# Local databases and outputs
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.env
+.env.*
