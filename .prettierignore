@@ -1,0 +1,10 @@
+dist
+target
+node_modules
+src-tauri/gen
+src-tauri/icons
+models
+coverage
+package-lock.json
+CHANGELOG.md
+*.md
