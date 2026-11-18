@@ -61,8 +61,10 @@ jobs:
       - name: Install Linux system libraries
         if: runner.os == 'Linux'
         run: |
-          # Skip the slow man-db trigger on Ubuntu 24.04 runners.
+          # Skip the slow man-db trigger and the sometimes very slow EC2 mirror.
           sudo rm -f /var/lib/man-db/auto-update
+          sudo sed -i -E 's#https?://[a-z0-9.-]*ec2\.archive\.ubuntu\.com#http://azure.archive.ubuntu.com#g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
           sudo apt-get update -q
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf xdg-utils
 
