@@ -120,7 +120,7 @@ no internet connection is needed after installing.
 | Windows 10/11 (x64) | `Blurlist_<version>_x64-setup.exe` (or `.msi`) | If SmartScreen says *Windows protected your PC*, choose **More info → Run anyway**. |
 | macOS 11+ Apple Silicon | `Blurlist_<version>_aarch64.dmg` | Drag to Applications. On first launch right-click → **Open**. If macOS says the app is damaged, run `xattr -cr /Applications/Blurlist.app` once. |
 | macOS 11+ Intel | `Blurlist_<version>_x64.dmg` | As above. |
-| Linux x64 | `.AppImage`, `.deb` or `.rpm` | AppImage: `chmod +x Blurlist_*.AppImage && ./Blurlist_*.AppImage`. Needs WebKitGTK 4.1 (preinstalled on current Ubuntu, Fedora, Debian). |
+| Linux x64 | `.AppImage`, `.deb` or `.rpm` | AppImage: `chmod +x Blurlist_*.AppImage && ./Blurlist_*.AppImage`. Needs glibc 2.39+ and WebKitGTK 4.1: Ubuntu 24.04+, Debian 13+, Fedora 40+ or similar. |
 
 The warnings appear because these builds are not signed with a paid developer certificate; the release
 workflow signs automatically once certificates are added as repository secrets. Every release lists SHA-256
