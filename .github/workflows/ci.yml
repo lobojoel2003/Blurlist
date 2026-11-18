@@ -82,7 +82,7 @@ jobs:
           # Skip the slow man-db trigger on Ubuntu 24.04 runners.
           sudo rm -f /var/lib/man-db/auto-update
           sudo apt-get update -q
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf
       - name: rustfmt
         if: runner.os == 'Linux'
         run: cargo fmt --all --check
